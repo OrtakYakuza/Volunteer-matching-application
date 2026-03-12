@@ -1,55 +1,96 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+//
+// Prisma schema for volunteer matching prototype
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider  = "sqlite"
+  url       = "file:./dev.db"
 }
 
+// ---------- Enums ----------
+
+// SQLite does not support enums natively like PostgreSQL, so we map them as String fields.
+// The types remain strongly typed in TypeScript due to the generator!
+
 model Volunteer {
-  id           String       @id @default(cuid())
-  name         String       // IR-01
-  email        String       @unique // IR-01
-  skills       String[]     // IR-02, IR-03
-  availability Json         // IR-04
-  location     String?      // IR-06
-  assignments  Assignment[]
-  createdAt    DateTime     @default(now())
+  id          String         @id @default(cuid())
+  name        String         // IR-01
+  email       String         @unique // IR-01
+  postalCode  String?        // IR-06
+  location    String?        // optional free-text region
+  // SQLite doesn't support arrays of strings easily, we will store them as a JSON string
+  skills      String         // Stored as JSON stringified array of Skills
+  availabilityBlocks Availability[]
+  assignments Assignment[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
 model Task {
-  id             String       @id @default(cuid())
-  category       String       // IR-08
-  description    String       // IR-08
-  location       String       // IR-08
-  requiredSkills String[]     // IR-08
-  capacity       Int          // FR-28, IR-08
-  startTime      DateTime     // IR-09
-  endTime        DateTime     // IR-09
-  priority       String       // IR-10
-  status         String       @default("open") // FR-30
-  automationMode String       @default("manual") // FR-09
-  assignments    Assignment[]
-  createdAt      DateTime     @default(now())
+  id             String         @id @default(cuid())
+  title          String         // human-readable task/mission name
+  category       String         // IR-08
+  description    String         // IR-08
+  location       String         // IR-08 (e.g. address or site name)
+  postalCode     String?        // IR-06 / IR-09 (for matching)
+  requiredSkills String         // Stored as JSON stringified array of Skills
+  capacity       Int            // FR-28, IR-08 (max volunteers)
+  startTime      DateTime       // IR-09
+  endTime        DateTime       // IR-09
+  priority       String         @default("MEDIUM") // Priority enum
+  status         String         @default("OPEN")   // TaskStatus enum
+  automationMode String         @default("MANUAL") // AutomationMode enum
+  meetingPoint   String?        // FR-06 (optional)
+  screeningRequired Boolean?    // FR-26
+  screeningNote    String?      // FR-26
+  assignments      Assignment[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
 
 model Assignment {
-  id           String    @id @default(cuid())
-  volunteer    Volunteer @relation(fields: [volunteerId], references: [id])
+  id           String           @id @default(cuid())
+  volunteer    Volunteer        @relation(fields: [volunteerId], references: [id])
   volunteerId  String
-  task         Task      @relation(fields: [taskId], references: [id])
+  task         Task             @relation(fields: [taskId], references: [id])
   taskId       String
-  status       String    @default("proposed") // IR-07, FR-11
-  duties       String?   // IR-13
-  contactPoint String?   // IR-13
-  createdAt    DateTime  @default(now())
+  status       String           @default("PROPOSED") // AssignmentStatus enum
+  automationMode String?          // AutomationMode enum
+  duties       String?          // IR-13
+  contactPoint String?          // IR-13
+  explanation  String?          // NFR-10 (why this match)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
-  @@unique([volunteerId, taskId]) // FR-14: Prevents double-booking
+  @@unique([volunteerId, taskId]) // FR-14: Prevents duplicate pairs
+}
+
+// ---------- Availability (structured) ----------
+
+model Availability {
+  id          String    @id @default(cuid())
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id])
+  volunteerId String
+  start       DateTime  // IR-04
+  end         DateTime  // IR-04
+  note        String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ---------- Audit / event log (optional, for NFR-04, IR-14) ----------
+
+model EventLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  actorType String   // e.g. "COORDINATOR" | "VOLUNTEER" | "SYSTEM"
+  actorId   String?  // optional reference ID
+  eventType String   // e.g. "VOLUNTEER_REGISTERED", "TASK_CREATED", etc.
+  payload   String?    // arbitrary event details as JSON string
 }
