@@ -102,6 +102,7 @@ flowchart TD
 
 - **Create seed script**
   - Add a Prisma seed script under `[prisma/seed.ts](prisma/seed.ts)` (or similar) to insert sample volunteers, availability, and tasks.
+  - Update seed data scenarios to reflect the thesis examples: Task 1 (Manual) = Pro Bono Lawyer; Task 2 (Semi-Auto) = Translator; Task 3 (Auto) = Handing out food.
   - Populate volunteers with diverse skills, postal codes, and availability windows.
   - Populate tasks with varying `maxCapacity`, `requiredSkills`, `priority`, and time slots.
   - Mark some tasks as nearly full to test automated shift capping (FR-28, FR-30).
@@ -166,6 +167,7 @@ flowchart TD
 - **Task creation & editing** (FR-06, FR-07, IR-08, IR-09)
   - Implement a `Create Task` form on a dedicated route, e.g. `[app/coordinator/tasks/new/page.tsx](app/coordinator/tasks/new/page.tsx)`.
   - Capture: title, category, description, location + postal code, required skills, start/end, `maxCapacity`, priority, screening flags, and optional meeting point.
+  - **Explicit Automation Selection:** Make it highly visible and intuitive for the coordinator to choose the Automation Mode (Manual, Semi-Auto, Auto) during task creation. The UI must clearly map these modes to their respective workflows so the coordinator understands the degree of control they are delegating.
   - Implement API routes for `POST /api/tasks` and `PATCH /api/tasks/:id` to handle creation and updates via Prisma.
   - Add a `View/Edit` task detail page (e.g. `[app/coordinator/tasks/[id]/page.tsx](app/coordinator/tasks/[id]/page.tsx)`) that shows assignments, match suggestions, and the three automation controls.
 - **Coordinator volunteer search/filter** (FR-27 – Could)
@@ -191,6 +193,7 @@ flowchart TD
   - Display the ranked suggestions in the UI. Since the system provides high-confidence matches, the coordinator can directly click `Accept` or `Decline` without necessarily contacting them first.
   - On approval, update assignment status to `ACCEPTED` and enforce capacity and double-booking rules.
 - **Mode 3 – Automatic auto-accept** (FR-09, FR-28, FR-30, FR-16, FR-17)
+  - **Supervisory Control for Auto-Mode:** To justify Auto Mode as Human-in-the-Loop (HITL), it cannot be a complete black box. The coordinator must manually trigger the Auto-Fill action. Once executed, the system must present a "Post-Action Review" or "Summary Log" (e.g., "System assigned 15 volunteers to reach capacity. Click to review roster") so the human remains the ultimate overseer.
   - The system listens for incoming volunteer applications (creation of `PROPOSED` assignment).
   - It instantly evaluates the application against skills, location, availability, and remaining task capacity.
   - If the application satisfies all constraints and the task is not full, it automatically updates the assignment to `ACCEPTED`.
@@ -212,6 +215,8 @@ flowchart TD
 ### Phase 8 – Non-functional requirements & UX refinement
 
 - **Usability under pressure (NFR-01, NFR-08, NFR-12, NFR-15)**
+  - **Cognitive Load Reduction (HCI):** Refactor UI components based on Cognitive Load Theory. Emphasize "chunking" of information, reduce visual clutter, and establish a clear visual hierarchy to reduce the coordinator's mental burden.
+  - **Mitigating Decision Fatigue:** For manual review queues (Modes 1 and 2), implement pagination or small batch processing instead of infinite scroll to prevent coordinator fatigue.
   - Iterate on the coordinator dashboard layout to maximize at-a-glance comprehension (clear labels, grouping, and consistent color coding for states).
   - Ensure all primary actions (Create Task, Get Suggestions, Auto-Fill, Assign) are visually prominent but not overwhelming.
   - Make sure both volunteer and coordinator UIs are responsive and usable on laptops and tablets.
