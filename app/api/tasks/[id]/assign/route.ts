@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AssignmentStatus, AutomationMode, TaskStatus, Skill } from "@/lib/enums";
-import { hasAvailabilityForTask } from "@/lib/matching";
+import { AssignmentStatus, AutomationMode, TaskStatus } from "@/lib/enums";
 
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -28,10 +27,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
     const volunteer = await prisma.volunteer.findUnique({
       where: { id: volunteerId },
-      include: {
-        availabilityBlocks: true,
-        assignments: true,
-      },
     });
 
     if (!volunteer) {
@@ -41,68 +36,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       );
     }
 
-    // Capability constraint: volunteer must have all required skills.
-    const required: Skill[] = JSON.parse(task.requiredSkills);
-    const volunteerSkills: Skill[] = JSON.parse(volunteer.skills);
-    const hasAllRequired =
-      required.length === 0 ||
-      required.every((s) => volunteerSkills.includes(s));
-
-    if (!hasAllRequired) {
-      return NextResponse.json(
-        {
-          error:
-            "Volunteer does not meet required skills for this task according to their self-assessment.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const availabilityOk = hasAvailabilityForTask(
-      volunteer.availabilityBlocks,
-      task.startTime,
-      task.endTime,
-    );
-
-    if (!availabilityOk) {
-      return NextResponse.json(
-        {
-          error:
-            "Volunteer is not available for the task time window according to stored availability.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const overlappingExisting = await prisma.assignment.findFirst({
-      where: {
-        volunteerId,
-        status: {
-          in: [AssignmentStatus.PROPOSED, AssignmentStatus.ACCEPTED],
-        },
-        task: {
-          startTime: { lt: task.endTime },
-          endTime: { gt: task.startTime },
-        },
-      },
-    });
-
-    if (overlappingExisting) {
-      return NextResponse.json(
-        {
-          error:
-            "Volunteer is already assigned to another task that overlaps this time window.",
-        },
-        { status: 400 },
-      );
-    }
-
     const activeAssignments = await prisma.assignment.count({
       where: {
         taskId,
-        status: {
-          in: [AssignmentStatus.PROPOSED, AssignmentStatus.ACCEPTED],
-        },
+        status: AssignmentStatus.ACCEPTED,
       },
     });
 
@@ -113,6 +50,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       );
     }
 
+    // Always create a PROPOSED assignment for all modes. Auto Mode is triggered manually by coordinator later.
     const created = await prisma.assignment.create({
       data: {
         volunteerId,

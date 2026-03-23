@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       startTime,
       endTime,
       priority,
+      automationMode,
       screeningRequired,
       screeningNote,
       meetingPoint,
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       startTime: string;
       endTime: string;
       priority?: Priority | string;
+      automationMode?: AutomationMode | string;
       screeningRequired?: boolean;
       screeningNote?: string;
       meetingPoint?: string;
@@ -59,6 +61,11 @@ export async function POST(request: Request) {
         ? ((priority as Priority) ?? Priority.MEDIUM)
         : priority ?? Priority.MEDIUM;
 
+    const parsedAutomationMode: AutomationMode =
+      typeof automationMode === "string"
+        ? ((automationMode as AutomationMode) ?? AutomationMode.MANUAL)
+        : automationMode ?? AutomationMode.MANUAL;
+
     const task = await prisma.task.create({
       data: {
         title,
@@ -72,7 +79,7 @@ export async function POST(request: Request) {
         endTime: new Date(endTime),
         priority: parsedPriority,
         status: TaskStatus.OPEN,
-        automationMode: AutomationMode.MANUAL,
+        automationMode: parsedAutomationMode,
         screeningRequired,
         screeningNote,
         meetingPoint,

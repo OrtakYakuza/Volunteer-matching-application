@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { AssignmentStatus, TaskStatus } from "@/lib/enums";
-
-type Volunteer = {
-  id: string;
-  name: string;
-  email: string;
-};
+import { useAuth } from "@/app/context/AuthContext";
+import Link from "next/link";
 
 type Task = {
   id: string;
@@ -20,6 +16,7 @@ type Task = {
   endTime: string;
   status: TaskStatus;
   meetingPoint: string | null;
+  capacity: number;
 };
 
 type Assignment = {
@@ -30,102 +27,80 @@ type Assignment = {
 };
 
 export default function VolunteerDashboardPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [, setVolunteer] = useState<Volunteer | null>(null);
+  const { user, isHydrated } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const volunteerIdFromQuery = searchParams.get("volunteerId");
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (volunteerIdFromQuery) {
-      fetchAssignments(volunteerIdFromQuery);
-      // We do not fetch volunteer details here to keep this simple.
+    if (isHydrated && !user) {
+      router.push("/");
     }
-  }, [volunteerIdFromQuery]);
+  }, [user, isHydrated, router]);
 
-  const lookupByEmail = async () => {
-    setLoading(true);
-    setError(null);
-    setActionError(null);
-    try {
-      const response = await fetch("/api/volunteers/lookup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error ?? "Could not find a volunteer for this email.");
-        return;
-      }
-
-      const v: Volunteer = data.volunteer;
-      setVolunteer(v);
-      router.push(`/volunteer/dashboard?volunteerId=${encodeURIComponent(v.id)}`);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to look up volunteer. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAssignments = async (volunteerId: string) => {
-    setLoading(true);
-    setError(null);
-    setActionError(null);
+  const fetchAssignments = useCallback(async (volunteerId: string) => {
     try {
       const response = await fetch(`/api/volunteers/${volunteerId}/assignments`);
       const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error ?? "Failed to load assignments.");
-        return;
+      if (response.ok) {
+        setAssignments(data.assignments ?? []);
       }
-
-      setAssignments(data.assignments ?? []);
     } catch (err) {
       console.error(err);
-      setError("Failed to load assignments.");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
-  const updateAssignmentStatus = async (
-    assignmentId: string,
-    status: AssignmentStatus,
-  ) => {
-    setActionError(null);
+  const fetchAvailableTasks = useCallback(async () => {
     try {
-      const response = await fetch(`/api/assignments/${assignmentId}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/tasks`);
+      const data = await response.json();
+      if (response.ok) {
+        // Filter out FULL and INACTIVE tasks
+        const openTasks = data.tasks.filter(
+          (t: Task) => t.status === TaskStatus.OPEN || t.status === TaskStatus.PARTIALLY_FILLED
+        );
+        setAvailableTasks(openTasks);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchAssignments(user.id);
+       
+      fetchAvailableTasks();
+    }
+  }, [user, fetchAssignments, fetchAvailableTasks]);
+
+  const applyForTask = async (taskId: string) => {
+    if (!user) return;
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/assign`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ volunteerId: user.id }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setActionError(data.error ?? "Failed to update assignment.");
+        setActionError(data.error ?? "Failed to apply for task.");
         return;
       }
 
-      setAssignments((prev) =>
-        prev.map((a) => (a.id === assignmentId ? { ...a, status } : a)),
-      );
+      setActionSuccess("Successfully applied! Your application is pending review or auto-accepted.");
+      fetchAssignments(user.id);
+      fetchAvailableTasks();
     } catch (err) {
       console.error(err);
-      setActionError("Failed to update assignment.");
+      setActionError("Failed to apply for task.");
     }
   };
 
@@ -139,80 +114,105 @@ export default function VolunteerDashboardPage() {
     (a) => a.status === AssignmentStatus.COMPLETED,
   );
 
-  const hasVolunteer = Boolean(volunteerIdFromQuery);
+  const hasVolunteer = Boolean(user);
+
+  if (!isHydrated || !hasVolunteer) return null;
+
+  // Filter out tasks the user has already applied for
+  const appliedTaskIds = new Set(assignments.map(a => a.task.id));
+  const visibleTasks = availableTasks.filter(t => !appliedTaskIds.has(t.id));
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-8 px-4 py-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-4 py-10">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Your missions</h1>
+        <h1 className="text-2xl font-semibold">Volunteer Dashboard</h1>
         <p className="text-sm text-zinc-600">
-          This page only shows assignments that have been coordinated for you.
+          Find opportunities and manage your missions. Welcome, {user?.name}.
         </p>
       </header>
 
-      {!hasVolunteer && (
-        <section className="space-y-4 rounded-lg border p-6">
-          <h2 className="text-sm font-semibold">
-            Identify yourself by email (no password)
-          </h2>
-          <p className="text-xs text-zinc-600">
-            Enter the email you used when registering as a volunteer. We will
-            show any mission proposals or confirmed assignments linked to it.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="email"
-              placeholder="you@example.org"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Available Tasks</h2>
+            </div>
+            
+            {actionError && (
+              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200" role="alert">
+                {actionError}
+              </p>
+            )}
+            {actionSuccess && (
+              <p className="text-sm text-green-700 bg-green-50 p-3 rounded-md border border-green-200" role="status">
+                {actionSuccess}
+              </p>
+            )}
+
+            {visibleTasks.length === 0 ? (
+              <p className="text-sm text-zinc-500 italic">No available tasks matching your search.</p>
+            ) : (
+              <ul className="space-y-4">
+                {visibleTasks.map((task) => (
+                  <li key={task.id} className="rounded-lg border p-4 shadow-sm bg-white">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold">{task.title}</h3>
+                      <Link
+                        href={`/volunteer/tasks/${task.id}`}
+                        className="bg-zinc-100 text-zinc-700 border text-xs px-3 py-1.5 rounded hover:bg-zinc-200 transition font-medium mr-2"
+                      >
+                        Details
+                      </Link>
+                      <button
+                        onClick={() => applyForTask(task.id)}
+                        className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded hover:bg-blue-700 transition"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    <p className="text-xs text-zinc-600 mb-4 line-clamp-2">{task.description}</p>
+                    <div className="text-xs text-zinc-500 flex flex-wrap gap-x-4 gap-y-2">
+                      <span className="flex items-center gap-1">📍 {task.location}</span>
+                      <span className="flex items-center gap-1">👥 {task.capacity} vols needed</span>
+                      <span className="flex items-center gap-1">
+                        📅 {new Date(task.startTime).toLocaleDateString()}
+                        {" "}•{" "}
+                        {new Date(task.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="space-y-6 bg-zinc-50 p-6 rounded-xl border sticky top-24">
+            <h2 className="text-lg font-semibold border-b pb-2">My Applications & Missions</h2>
+            
+            <AssignmentsSection
+              title="Pending Applications"
+              emptyText="You have no pending applications."
+              assignments={proposedAssignments}
+              statusColor="text-yellow-700 bg-yellow-50 border-yellow-200"
+              statusText="Review Pending"
             />
-            <button
-              type="button"
-              onClick={lookupByEmail}
-              disabled={loading || !email}
-              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
-            >
-              {loading ? "Looking up..." : "Show my missions"}
-            </button>
-          </div>
-          {error && (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          )}
-        </section>
-      )}
 
-      {hasVolunteer && (
-        <section className="space-y-6">
-          {actionError && (
-            <p className="text-sm text-red-600" role="alert">
-              {actionError}
-            </p>
-          )}
+            <AssignmentsSection
+              title="Confirmed Missions"
+              emptyText="You have no confirmed missions yet."
+              assignments={acceptedAssignments}
+              statusColor="text-green-700 bg-green-50 border-green-200"
+              statusText="Confirmed"
+            />
 
-          <AssignmentsSection
-            title="Mission proposals awaiting your decision"
-            emptyText="You have no open mission proposals at the moment."
-            assignments={proposedAssignments}
-            showActions
-            onAction={updateAssignmentStatus}
-          />
-
-          <AssignmentsSection
-            title="Upcoming confirmed missions"
-            emptyText="You have no confirmed missions yet."
-            assignments={acceptedAssignments}
-          />
-
-          <AssignmentsSection
-            title="Completed missions"
-            emptyText="Completed missions will appear here for reference."
-            assignments={completedAssignments}
-          />
-        </section>
-      )}
+            <AssignmentsSection
+              title="Completed Missions"
+              emptyText="Completed missions will appear here."
+              assignments={completedAssignments}
+              statusColor="text-zinc-600 bg-zinc-100 border-zinc-200"
+              statusText="Completed"
+            />
+          </section>
+        </div>
     </main>
   );
 }
@@ -221,74 +221,54 @@ type AssignmentsSectionProps = {
   title: string;
   emptyText: string;
   assignments: Assignment[];
-  showActions?: boolean;
-  onAction?: (id: string, status: AssignmentStatus) => void;
+  statusColor: string;
+  statusText: string;
 };
 
 function AssignmentsSection({
   title,
   emptyText,
   assignments,
-  showActions,
-  onAction,
+  statusColor,
+  statusText
 }: AssignmentsSectionProps) {
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <h3 className="text-sm font-semibold text-zinc-800">{title}</h3>
       {assignments.length === 0 ? (
-        <p className="text-xs text-zinc-600">{emptyText}</p>
+        <p className="text-xs text-zinc-500 italic">{emptyText}</p>
       ) : (
         <ul className="space-y-3">
           {assignments.map((assignment) => (
             <li
               key={assignment.id}
-              className="rounded-lg border px-4 py-3 text-sm"
+              className="rounded-lg border bg-white px-4 py-3 text-sm shadow-sm"
             >
-              <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-medium">{assignment.task.title}</p>
-                  <p className="text-xs text-zinc-600">
-                    {assignment.task.location}
-                    {assignment.task.postalCode
-                      ? ` · ${assignment.task.postalCode}`
-                      : ""}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    {new Date(assignment.task.startTime).toLocaleString()} –{" "}
-                    {new Date(assignment.task.endTime).toLocaleString()}
-                  </p>
-                  {assignment.task.meetingPoint && (
-                    <p className="mt-1 text-xs text-zinc-600">
-                      Meeting point: {assignment.task.meetingPoint}
-                    </p>
-                  )}
-                </div>
-                {showActions && onAction && (
-                  <div className="mt-3 flex gap-2 md:mt-0 md:flex-col">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onAction(assignment.id, AssignmentStatus.ACCEPTED)
-                      }
-                      className="inline-flex items-center justify-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-                    >
-                      Accept mission
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onAction(assignment.id, AssignmentStatus.DECLINED)
-                      }
-                      className="inline-flex items-center justify-center rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-100"
-                    >
-                      Decline
-                    </button>
-                  </div>
-                )}
+              <div className="flex justify-between items-start mb-1">
+                <Link href={`/volunteer/tasks/${assignment.task.id}`} className="font-medium hover:underline text-blue-700">
+                  {assignment.task.title}
+                </Link>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${statusColor} flex items-center gap-1`}>
+                  {statusText === 'Review Pending' && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>}
+                  {statusText === 'Confirmed' && <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>}
+                  {statusText}
+                </span>
               </div>
-              <p className="mt-2 text-xs text-zinc-700">
-                {assignment.task.description}
+              <p className="text-xs text-zinc-600">
+                {assignment.task.location}
+                {assignment.task.postalCode
+                  ? ` · ${assignment.task.postalCode}`
+                  : ""}
               </p>
+              <p className="mt-1 text-xs text-zinc-600">
+                {new Date(assignment.task.startTime).toLocaleString()} –{" "}
+                {new Date(assignment.task.endTime).toLocaleString()}
+              </p>
+              {assignment.task.meetingPoint && (
+                <p className="mt-1 text-xs text-zinc-600 font-medium">
+                  Meeting point: {assignment.task.meetingPoint}
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -296,4 +276,3 @@ function AssignmentsSection({
     </section>
   );
 }
-

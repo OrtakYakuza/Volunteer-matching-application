@@ -1,13 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { AssignmentStatus, Priority, TaskStatus } from "@/lib/enums";
+import { CoordinatorOnboarding } from "@/app/components/CoordinatorOnboarding";
 
 export default async function CoordinatorDashboardPage() {
+  // In a real app we would pass initial state to a client component, 
+  // but since this is async, we'll wrap the content in a client component.
   const tasks = await prisma.task.findMany({
     orderBy: { startTime: "asc" },
     include: {
       assignments: {
         where: {
-          status: { in: ["PROPOSED", "ACCEPTED"] },
+          status: { in: [AssignmentStatus.PROPOSED, AssignmentStatus.ACCEPTED] },
         },
       },
     },
@@ -29,6 +33,8 @@ export default async function CoordinatorDashboardPage() {
           Create task
         </Link>
       </header>
+
+      <CoordinatorOnboarding />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">Active tasks</h2>
@@ -52,45 +58,56 @@ export default async function CoordinatorDashboardPage() {
                 total > 0 ? Math.round((filled / total) * 100) : 0,
               );
 
-              const isFull = task.status === "FULL";
+              const isFull = task.status === TaskStatus.FULL;
+              const isCritical = task.priority === Priority.CRITICAL;
 
               return (
                 <li
                   key={task.id}
-                  className={`rounded-lg border px-4 py-3 text-sm ${
-                    isFull ? "bg-zinc-100" : "bg-white"
+                  className={`rounded-lg border px-4 py-3 text-sm transition-colors ${
+                    isFull 
+                      ? "bg-zinc-100 border-zinc-200" 
+                      : isCritical 
+                        ? "bg-red-50 border-red-200 shadow-sm" 
+                        : "bg-white"
                   }`}
                 >
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="font-medium">{task.title}</p>
-                      <p className="text-xs text-zinc-600">
-                        {task.location}
-                        {task.postalCode ? ` · ${task.postalCode}` : ""}
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-600">
-                        {new Date(task.startTime).toLocaleString()} –{" "}
-                        {new Date(task.endTime).toLocaleString()}
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-zinc-900">{task.title}</p>
+                        {isCritical && !isFull && (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                            CRITICAL
+                          </span>
+                        )}
+                        <span className="rounded-full border border-zinc-300 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                          {task.automationMode}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-600 mt-1 flex items-center gap-2">
+                        <span>📍 {task.location}</span>
+                        <span>•</span>
+                        <span>📅 {new Date(task.startTime).toLocaleDateString()}</span>
                       </p>
                     </div>
                     <div className="mt-2 flex flex-col items-start gap-1 text-xs md:mt-0 md:items-end">
-                      <span>
-                        {filled}/{total} confirmed
-                        {proposedCount > 0
-                          ? ` (+${proposedCount} proposed)`
-                          : ""}
-                      </span>
-                      <div className="h-2 w-40 overflow-hidden rounded-full bg-zinc-200">
+                      <div className="relative h-4 w-40 overflow-hidden rounded-full bg-zinc-200 border border-zinc-300">
                         <div
-                          className={`h-full ${
-                            isFull ? "bg-green-600" : "bg-blue-600"
+                          className={`absolute top-0 left-0 h-full ${
+                            isFull ? "bg-green-500" : "bg-blue-200"
                           }`}
                           style={{ width: `${percent}%` }}
                         />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-zinc-800 drop-shadow-sm">
+                           {isFull ? "✓ FULL" : `${filled} / ${total}`}
+                        </span>
                       </div>
-                      <span className="text-[11px] text-zinc-500">
-                        Status: {task.status.toLowerCase()}
-                      </span>
+                      {proposedCount > 0 && (
+                        <span className="text-[10px] font-medium text-yellow-700 bg-yellow-50 px-2 rounded-full border border-yellow-200">
+                          {proposedCount} pending
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-3 flex justify-end">

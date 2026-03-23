@@ -8,23 +8,38 @@ export async function POST(request: Request) {
     const {
       name,
       email,
+      phoneNumber,
+      birthDate,
       postalCode,
       location,
+      description,
       skills,
-      availabilityBlocks,
     }: {
       name: string;
       email: string;
+      phoneNumber: string;
+      birthDate: string;
       postalCode?: string;
       location?: string;
+      description?: string;
       skills: Skill[] | string[];
-      availabilityBlocks?: { start: string; end: string; note?: string }[];
     } = body;
 
-    if (!name || !email) {
+    if (!name || !email || !phoneNumber || !birthDate) {
       return NextResponse.json(
-        { error: "Name and email are required." },
+        { error: "Name, email, phone number, and birth date are required." },
         { status: 400 },
+      );
+    }
+
+    const existingVolunteer = await prisma.volunteer.findUnique({
+      where: { email },
+    });
+
+    if (existingVolunteer) {
+      return NextResponse.json(
+        { error: "A volunteer with this email already exists." },
+        { status: 409 },
       );
     }
 
@@ -36,18 +51,12 @@ export async function POST(request: Request) {
       data: {
         name,
         email,
+        phoneNumber,
+        birthDate: new Date(birthDate),
         postalCode,
         location,
+        description,
         skills: JSON.stringify(parsedSkills),
-        availabilityBlocks: availabilityBlocks
-          ? {
-              create: availabilityBlocks.map((block) => ({
-                start: new Date(block.start),
-                end: new Date(block.end),
-                note: block.note,
-              })),
-            }
-          : undefined,
       },
     });
 
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
       {
         volunteer,
         message:
-          "Thank you for registering. Coordinators will review your availability and send you mission proposals.",
+          "Thank you for registering. You can now browse tasks and apply.",
       },
       { status: 201 },
     );

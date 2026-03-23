@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AssignmentStatus, AutomationMode, TaskStatus } from "@/lib/enums";
 import { scoreVolunteerForTask, ScoredVolunteer } from "@/lib/matching";
+import { Volunteer } from "@prisma/client";
 
 
 export async function GET(_request: Request, props: { params: Promise<{ id: string }> }) {
@@ -110,28 +111,25 @@ async function suggestVolunteers(taskId: string) {
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
     }
 
-    const volunteers = await prisma.volunteer.findMany({
-      include: {
-        availabilityBlocks: true,
-        assignments: {
-          where: {
-            status: {
-              in: [AssignmentStatus.PROPOSED, AssignmentStatus.ACCEPTED],
-            },
-          },
-        },
-      },
-    });
-
-    const activeAssignments = await prisma.assignment.findMany({
+    // Only suggest from volunteers who have explicitly applied (status PROPOSED)
+    const proposedAssignments = await prisma.assignment.findMany({
       where: {
         taskId,
-        status: { in: [AssignmentStatus.PROPOSED, AssignmentStatus.ACCEPTED] },
+        status: AssignmentStatus.PROPOSED,
+      },
+      include: {
+        volunteer: true
+      }
+    });
+
+    const activeAssignmentsCount = await prisma.assignment.count({
+      where: {
+        taskId,
+        status: AssignmentStatus.ACCEPTED,
       },
     });
-    const currentCount = activeAssignments.length;
 
-    const capacityLeft = task.capacity - currentCount;
+    const capacityLeft = task.capacity - activeAssignmentsCount;
     if (capacityLeft <= 0) {
       return NextResponse.json(
         { suggestions: [], message: "Task is already at or above capacity." },
@@ -141,19 +139,10 @@ async function suggestVolunteers(taskId: string) {
 
     const scored: ScoredVolunteer[] = [];
 
-    for (const volunteer of volunteers) {
-      const alreadyActiveForTask = volunteer.assignments.some(
-        (a) =>
-          a.taskId === taskId &&
-          ([AssignmentStatus.PROPOSED as string, AssignmentStatus.ACCEPTED as string]).includes(
-            a.status,
-          ),
-      );
-
-      if (alreadyActiveForTask) continue;
-
-      const result = scoreVolunteerForTask(volunteer, task);
+    for (const assignment of proposedAssignments) {
+      const result = scoreVolunteerForTask(assignment.volunteer as Volunteer, task);
       if (result) {
+        result.assignmentId = assignment.id;
         scored.push(result);
       }
     }
@@ -194,17 +183,15 @@ async function autoFillTask(taskId: string) {
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
     }
 
-    const volunteers = await prisma.volunteer.findMany({
-      include: {
-        availabilityBlocks: true,
-        assignments: {
-          where: {
-            status: {
-              in: [AssignmentStatus.PROPOSED, AssignmentStatus.ACCEPTED],
-            },
-          },
-        },
+    // Auto-fill should only auto-accept existing PROPOSED applicants
+    const proposedAssignments = await prisma.assignment.findMany({
+      where: {
+        taskId,
+        status: AssignmentStatus.PROPOSED,
       },
+      include: {
+        volunteer: true
+      }
     });
 
     const initialCount = task.assignments.filter(
@@ -220,18 +207,8 @@ async function autoFillTask(taskId: string) {
     }
 
     const scored: ScoredVolunteer[] = [];
-    for (const volunteer of volunteers) {
-      const alreadyActiveForTask = volunteer.assignments.some(
-        (a) =>
-          a.taskId === taskId &&
-          ([AssignmentStatus.PROPOSED as string, AssignmentStatus.ACCEPTED as string]).includes(
-            a.status,
-          ),
-      );
-
-      if (alreadyActiveForTask) continue;
-
-      const result = scoreVolunteerForTask(volunteer, task);
+    for (const assignment of proposedAssignments) {
+      const result = scoreVolunteerForTask(assignment.volunteer as Volunteer, task);
       if (result) {
         scored.push(result);
       }
@@ -242,19 +219,23 @@ async function autoFillTask(taskId: string) {
     const toAssign = scored.slice(0, capacityLeft);
 
     const created = await prisma.$transaction(async (tx) => {
-      const createdAssignments = [];
+      const updatedAssignments = [];
       for (const candidate of toAssign) {
         if (capacityLeft <= 0) break;
-        const assignment = await tx.assignment.create({
+        // The assignment already exists as PROPOSED, so we update it.
+        // We need to find the assignment ID for this volunteer and task.
+        const existingAssignment = proposedAssignments.find(a => a.volunteerId === candidate.volunteer.id);
+        if (!existingAssignment) continue;
+
+        const assignment = await tx.assignment.update({
+          where: { id: existingAssignment.id },
           data: {
-            volunteerId: candidate.volunteer.id,
-            taskId,
-            status: AssignmentStatus.PROPOSED,
+            status: AssignmentStatus.ACCEPTED,
             automationMode: AutomationMode.AUTO,
             explanation: candidate.explanation,
           },
         });
-        createdAssignments.push(assignment);
+        updatedAssignments.push(assignment);
         capacityLeft -= 1;
       }
 
@@ -286,10 +267,10 @@ async function autoFillTask(taskId: string) {
         },
       });
 
-      return createdAssignments;
+      return updatedAssignments;
     });
 
-    return NextResponse.json({ createdAssignments: created }, { status: 200 });
+    return NextResponse.json({ updatedAssignments: created }, { status: 200 });
   } catch (error) {
     console.error("Error auto-filling task", error);
     return NextResponse.json(

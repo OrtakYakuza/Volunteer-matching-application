@@ -1,18 +1,20 @@
 import {
   Task,
   Volunteer,
-  Availability,
 } from "@prisma/client";
 import { Skill, Priority, AssignmentStatus } from "./enums";
 
 export type ScoredVolunteer = {
-  volunteer: Volunteer & { availabilityBlocks: Availability[] };
+  volunteer: Volunteer;
   score: number;
   explanation: string;
+  assignmentId?: string;
 };
 
+// NOTE: Scoring mechanism needs careful review for thesis evaluation.
+// It currently uses simple weights but might need a more sophisticated HCI-aligned approach later.
 export function scoreVolunteerForTask(
-  volunteer: Volunteer & { availabilityBlocks: Availability[] },
+  volunteer: Volunteer,
   task: Task,
 ): ScoredVolunteer | null {
   // Since skills are stored as JSON strings in SQLite, we need to parse them
@@ -20,23 +22,11 @@ export function scoreVolunteerForTask(
   const requiredSkills = JSON.parse(task.requiredSkills) as Skill[];
 
   const skillScore = computeSkillScore(volunteerSkills, requiredSkills);
-  if (skillScore <= 0) {
-    return null;
-  }
 
   const locationScore = computeLocationScore(
     volunteer.postalCode ?? null,
     task.postalCode,
   );
-
-  const availabilityOk = hasAvailabilityForTask(
-    volunteer.availabilityBlocks,
-    task.startTime,
-    task.endTime,
-  );
-  if (!availabilityOk) {
-    return null;
-  }
 
   const priorityBoost = computePriorityBoost(task.priority as Priority);
 
@@ -47,7 +37,6 @@ export function scoreVolunteerForTask(
   if (locationScore > 0) {
     explanationParts.push("Same or nearby postal code");
   }
-  explanationParts.push("Available during task time window");
 
   return {
     volunteer,
@@ -80,21 +69,6 @@ export function computeLocationScore(
     return 1;
   }
   return 0;
-}
-
-export function hasAvailabilityForTask(
-  availabilityBlocks: Availability[],
-  taskStart: Date,
-  taskEnd: Date,
-): boolean {
-  if (availabilityBlocks.length === 0) {
-    return true;
-  }
-  return availabilityBlocks.some((block) => {
-    const start = block.start;
-    const end = block.end;
-    return start <= taskStart && end >= taskEnd;
-  });
 }
 
 export function computePriorityBoost(priority: Priority): number {

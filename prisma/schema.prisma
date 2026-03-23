@@ -21,11 +21,13 @@ model Volunteer {
   id          String         @id @default(cuid())
   name        String         // IR-01
   email       String         @unique // IR-01
+  phoneNumber String
+  birthDate   DateTime
   postalCode  String?        // IR-06
   location    String?        // optional free-text region
+  description String?        // optional text box for volunteer to write about themselves
   // SQLite doesn't support arrays of strings easily, we will store them as a JSON string
   skills      String         // Stored as JSON stringified array of Skills
-  availabilityBlocks Availability[]
   assignments Assignment[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -68,20 +70,6 @@ model Assignment {
   updatedAt    DateTime         @updatedAt
 
   @@unique([volunteerId, taskId]) // FR-14: Prevents duplicate pairs
-}
-
-// ---------- Availability (structured) ----------
-
-model Availability {
-  id          String    @id @default(cuid())
-  volunteer   Volunteer @relation(fields: [volunteerId], references: [id])
-  volunteerId String
-  start       DateTime  // IR-04
-  end         DateTime  // IR-04
-  note        String?
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
 }
 
 // ---------- Audit / event log (optional, for NFR-04, IR-14) ----------

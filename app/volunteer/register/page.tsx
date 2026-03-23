@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { Skill } from "@/lib/enums";
+import { useAuth } from "@/app/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const ALL_SKILLS: { value: Skill; label: string }[] = [
   { value: Skill.HEAVY_PHYSICAL, label: "Heavy physical work" },
@@ -14,20 +16,17 @@ const ALL_SKILLS: { value: Skill; label: string }[] = [
   { value: Skill.INFORMATION_RETRIEVAL, label: "Information / documentation" },
 ];
 
-type AvailabilityBlockInput = {
-  start: string;
-  end: string;
-};
-
 export default function VolunteerRegisterPage() {
+  const { loginAsVolunteer } = useAuth();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
-  const [availabilityBlocks, setAvailabilityBlocks] = useState<
-    AvailabilityBlockInput[]
-  >([{ start: "", end: "" }]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,22 +37,6 @@ export default function VolunteerRegisterPage() {
     );
   };
 
-  const handleAvailabilityChange = (
-    index: number,
-    field: "start" | "end",
-    value: string,
-  ) => {
-    setAvailabilityBlocks((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
-      return next;
-    });
-  };
-
-  const addAvailabilityBlock = () => {
-    setAvailabilityBlocks((prev) => [...prev, { start: "", end: "" }]);
-  };
-
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
@@ -61,10 +44,6 @@ export default function VolunteerRegisterPage() {
     setError(null);
 
     try {
-      const filteredBlocks = availabilityBlocks.filter(
-        (b) => b.start && b.end,
-      );
-
       const response = await fetch("/api/volunteers", {
         method: "POST",
         headers: {
@@ -73,10 +52,12 @@ export default function VolunteerRegisterPage() {
         body: JSON.stringify({
           name,
           email,
+          phoneNumber,
+          birthDate,
           postalCode: postalCode || undefined,
           location: location || undefined,
+          description: description || undefined,
           skills: selectedSkills,
-          availabilityBlocks: filteredBlocks,
         }),
       });
 
@@ -87,13 +68,12 @@ export default function VolunteerRegisterPage() {
         return;
       }
 
-      setMessage(data.message);
-      setName("");
-      setEmail("");
-      setPostalCode("");
-      setLocation("");
-      setSelectedSkills([]);
-      setAvailabilityBlocks([{ start: "", end: "" }]);
+      loginAsVolunteer(data.volunteer);
+      setMessage("Registration successful! Redirecting to your dashboard...");
+
+      setTimeout(() => {
+        router.push("/volunteer/dashboard");
+      }, 1000);
     } catch (err) {
       console.error(err);
       setError("Something went wrong. Please try again.");
@@ -143,6 +123,32 @@ export default function VolunteerRegisterPage() {
             />
           </div>
           <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium" htmlFor="phoneNumber">
+              Phone Number
+            </label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              required
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium" htmlFor="birthDate">
+              Birth Date
+            </label>
+            <input
+              id="birthDate"
+              type="date"
+              required
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-medium" htmlFor="postalCode">
               Postal code
             </label>
@@ -164,6 +170,22 @@ export default function VolunteerRegisterPage() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className="text-sm font-medium" htmlFor="description">
+              About me (optional)
+            </label>
+            <p className="text-xs text-zinc-600">
+              Briefly describe your background, motivation, or any special constraints you have.
+            </p>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="I am a retired nurse wanting to help..."
             />
           </div>
         </section>
@@ -192,57 +214,6 @@ export default function VolunteerRegisterPage() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Availability (optional)</h2>
-          <p className="text-xs text-zinc-600">
-            Add one or more time windows when you are available to help.
-          </p>
-          <div className="space-y-3">
-            {availabilityBlocks.map((block, index) => (
-              <div
-                key={index}
-                className="grid gap-3 rounded-md border px-3 py-3 md:grid-cols-2"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium" htmlFor={`start-${index}`}>
-                    Start
-                  </label>
-                  <input
-                    id={`start-${index}`}
-                    type="datetime-local"
-                    value={block.start}
-                    onChange={(e) =>
-                      handleAvailabilityChange(index, "start", e.target.value)
-                    }
-                    className="rounded-md border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium" htmlFor={`end-${index}`}>
-                    End
-                  </label>
-                  <input
-                    id={`end-${index}`}
-                    type="datetime-local"
-                    value={block.end}
-                    onChange={(e) =>
-                      handleAvailabilityChange(index, "end", e.target.value)
-                    }
-                    className="rounded-md border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={addAvailabilityBlock}
-            className="text-xs font-medium text-blue-600 hover:underline"
-          >
-            + Add another time window
-          </button>
-        </section>
-
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}
@@ -265,4 +236,3 @@ export default function VolunteerRegisterPage() {
     </main>
   );
 }
-
