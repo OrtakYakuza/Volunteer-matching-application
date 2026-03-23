@@ -33,6 +33,14 @@ model Volunteer {
   updatedAt   DateTime       @updatedAt
 }
 
+model Coordinator {
+  id          String         @id @default(cuid())
+  name        String
+  email       String         @unique
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
 model Task {
   id             String         @id @default(cuid())
   title          String         // human-readable task/mission name

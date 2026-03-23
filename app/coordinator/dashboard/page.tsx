@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { AssignmentStatus, Priority, TaskStatus } from "@/lib/enums";
 import { CoordinatorOnboarding } from "@/app/components/CoordinatorOnboarding";
+import { CoordinatorAuthGuard } from "@/app/components/CoordinatorAuthGuard";
 
 export default async function CoordinatorDashboardPage() {
   // In a real app we would pass initial state to a client component, 
@@ -19,6 +20,7 @@ export default async function CoordinatorDashboardPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-4 py-10">
+      <CoordinatorAuthGuard />
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-semibold">Coordinator dashboard</h1>
@@ -110,12 +112,12 @@ export default async function CoordinatorDashboardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-4 flex justify-end">
                     <Link
                       href={`/coordinator/tasks/${task.id}`}
-                      className="text-xs font-medium text-blue-600 hover:underline"
+                      className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
                     >
-                      Open task
+                      Manage task →
                     </Link>
                   </div>
                 </li>

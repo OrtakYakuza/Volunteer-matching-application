@@ -10,6 +10,15 @@ async function main() {
   await prisma.assignment.deleteMany()
   await prisma.task.deleteMany()
   await prisma.volunteer.deleteMany()
+  await prisma.coordinator.deleteMany()
+
+  console.log('Creating Coordinator...')
+  await prisma.coordinator.create({
+    data: {
+      name: 'Admin Coordinator',
+      email: 'admin@crisis.org',
+    }
+  })
 
   console.log('Creating Volunteers...')
   const volunteers = []

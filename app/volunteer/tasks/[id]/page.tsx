@@ -133,7 +133,7 @@ export default function VolunteerTaskDetailPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-4 py-10">
-      <Link href="/volunteer/dashboard" className="text-sm font-medium text-zinc-500 hover:text-zinc-800 flex items-center gap-2">
+      <Link href="/volunteer/dashboard" className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 w-fit transition-colors">
         ← Back to Dashboard
       </Link>
 

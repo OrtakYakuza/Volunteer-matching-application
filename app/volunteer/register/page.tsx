@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { Skill } from "@/lib/enums";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const ALL_SKILLS: { value: Skill; label: string }[] = [
   { value: Skill.HEAVY_PHYSICAL, label: "Heavy physical work" },
@@ -84,6 +85,9 @@ export default function VolunteerRegisterPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-4 py-10">
+      <Link href="/" className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 w-fit transition-colors">
+        ← Back to Login
+      </Link>
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">
           Volunteer Registration – Virtual VRC

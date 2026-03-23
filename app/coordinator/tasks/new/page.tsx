@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { Priority, Skill, AutomationMode } from "@/lib/enums";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { CoordinatorAuthGuard } from "@/app/components/CoordinatorAuthGuard";
 
 const ALL_SKILLS: { value: Skill; label: string }[] = [
   { value: Skill.HEAVY_PHYSICAL, label: "Heavy physical work" },
@@ -84,6 +86,10 @@ export default function NewTaskPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-4 py-10">
+      <CoordinatorAuthGuard />
+      <Link href="/coordinator/dashboard" className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 w-fit transition-colors">
+        ← Back to Dashboard
+      </Link>
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Create task</h1>
         <p className="text-sm text-zinc-600">

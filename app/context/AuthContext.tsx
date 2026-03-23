@@ -4,7 +4,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from "react
 
 export type Role = "VOLUNTEER" | "COORDINATOR" | null;
 
-export type VolunteerUser = {
+export type UserData = {
   id: string;
   name: string;
   email: string;
@@ -12,9 +12,9 @@ export type VolunteerUser = {
 
 interface AuthContextType {
   role: Role;
-  user: VolunteerUser | null;
-  loginAsCoordinator: () => void;
-  loginAsVolunteer: (user: VolunteerUser) => void;
+  user: UserData | null;
+  loginAsCoordinator: (user: UserData) => void;
+  loginAsVolunteer: (user: UserData) => void;
   logout: () => void;
   isHydrated: boolean;
 }
@@ -23,16 +23,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>(null);
-  const [user, setUser] = useState<VolunteerUser | null>(null);
+  const [user, setUser] = useState<UserData | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     const savedRole = localStorage.getItem("authRole") as Role;
     const savedUser = localStorage.getItem("authUser");
     
-    if (savedRole === "COORDINATOR") {
+    if (savedRole === "COORDINATOR" && savedUser) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRole("COORDINATOR");
+      try {
+         
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error("Failed to parse user", e);
+      }
     } else if (savedRole === "VOLUNTEER" && savedUser) {
        
       setRole("VOLUNTEER");
@@ -44,17 +50,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
      
+     
     setIsHydrated(true);
   }, []);
 
-  const loginAsCoordinator = () => {
+  const loginAsCoordinator = (c: UserData) => {
     setRole("COORDINATOR");
-    setUser(null);
+    setUser(c);
     localStorage.setItem("authRole", "COORDINATOR");
-    localStorage.removeItem("authUser");
+    localStorage.setItem("authUser", JSON.stringify(c));
   };
 
-  const loginAsVolunteer = (v: VolunteerUser) => {
+  const loginAsVolunteer = (v: UserData) => {
     setRole("VOLUNTEER");
     setUser(v);
     localStorage.setItem("authRole", "VOLUNTEER");

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AssignmentStatus, Priority, Skill, TaskStatus } from "@/lib/enums";
 import { VolunteerProfileCard } from "@/app/components/VolunteerProfileCard";
+import Link from "next/link";
+import { CoordinatorAuthGuard } from "@/app/components/CoordinatorAuthGuard";
 
 type Volunteer = {
   id: string;
@@ -217,6 +219,10 @@ export default function TaskDetailPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-4 py-10">
+      <CoordinatorAuthGuard />
+      <Link href="/coordinator/dashboard" className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 w-fit transition-colors">
+        ← Back to Dashboard
+      </Link>
       <header className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
