@@ -5,6 +5,7 @@ import { Priority, Skill, AutomationMode } from "@/lib/enums";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CoordinatorAuthGuard } from "@/app/components/CoordinatorAuthGuard";
+import { AutomationModeEvaluator } from "@/app/components/AutomationModeEvaluator";
 
 const ALL_SKILLS: { value: Skill; label: string }[] = [
   { value: Skill.HEAVY_PHYSICAL, label: "Heavy physical work" },
@@ -228,83 +229,6 @@ export default function NewTaskPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-sm font-medium">Automation Mode (Delegation of Control)</label>
-            <p className="text-xs text-zinc-600 mb-2">
-              Choose how applications are handled. This determines the human-in-the-loop workflow.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label
-                className={`flex cursor-pointer flex-col rounded-md border p-3 ${
-                  automationMode === AutomationMode.MANUAL
-                    ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
-                    : "border-zinc-200 bg-white hover:bg-zinc-50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="automationMode"
-                    value={AutomationMode.MANUAL}
-                    checked={automationMode === AutomationMode.MANUAL}
-                    onChange={() => setAutomationMode(AutomationMode.MANUAL)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-600"
-                  />
-                  <span className="font-semibold text-sm">Manual (High Risk)</span>
-                </div>
-                <p className="mt-1 text-xs text-zinc-600 ml-6">
-                  You review every applicant. Requires offline discussion before explicitly accepting.
-                </p>
-              </label>
-
-              <label
-                className={`flex cursor-pointer flex-col rounded-md border p-3 ${
-                  automationMode === AutomationMode.SEMI_AUTO
-                    ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
-                    : "border-zinc-200 bg-white hover:bg-zinc-50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="automationMode"
-                    value={AutomationMode.SEMI_AUTO}
-                    checked={automationMode === AutomationMode.SEMI_AUTO}
-                    onChange={() => setAutomationMode(AutomationMode.SEMI_AUTO)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-600"
-                  />
-                  <span className="font-semibold text-sm">Semi-Auto (Med Risk)</span>
-                </div>
-                <p className="mt-1 text-xs text-zinc-600 ml-6">
-                  System scores & ranks applicants. You review the suggestions and approve.
-                </p>
-              </label>
-
-              <label
-                className={`flex cursor-pointer flex-col rounded-md border p-3 ${
-                  automationMode === AutomationMode.AUTO
-                    ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
-                    : "border-zinc-200 bg-white hover:bg-zinc-50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="automationMode"
-                    value={AutomationMode.AUTO}
-                    checked={automationMode === AutomationMode.AUTO}
-                    onChange={() => setAutomationMode(AutomationMode.AUTO)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-600"
-                  />
-                  <span className="font-semibold text-sm">Auto (Low Risk)</span>
-                </div>
-                <p className="mt-1 text-xs text-zinc-600 ml-6">
-                  Instant evaluation. Valid applicants are automatically accepted up to capacity.
-                </p>
-              </label>
-            </div>
-          </div>
-
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium" htmlFor="priority">
               Priority
@@ -357,6 +281,19 @@ export default function NewTaskPage() {
               className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <label className="text-sm font-medium">Automation Mode (Delegation of Control)</label>
+          <p className="text-xs text-zinc-500">
+            Choose how volunteer applications are processed. Use &ldquo;Guide me&rdquo; to get a
+            recommendation based on the task&rsquo;s risk profile.
+          </p>
+          <AutomationModeEvaluator
+            value={automationMode}
+            onChange={setAutomationMode}
+            taskPriority={priority}
+          />
         </section>
 
         {error && (
