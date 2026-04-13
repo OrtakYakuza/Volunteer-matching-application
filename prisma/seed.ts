@@ -22,7 +22,7 @@ async function main() {
 
   console.log('Creating Volunteers...')
   const volunteers = []
-  const names = ['Alice Smith', 'Bob Jones', 'Charlie Davis', 'Diana Prince', 'Eve Adams', 'Frank Castle', 'Grace Lee', 'Hank Pym', 'Ivy Chen', 'Jack Ryan', 'Karen Page', 'Leo Fitz', 'Mia Wong']
+  const names = ['Alice Smith', 'Bob Jones', 'Charlie Davis', 'Diana Prince', 'Eve Adams', 'Frank Castle', 'Grace Lee', 'Hank Pym', 'Ivy Chen', 'Jack Ryan', 'Karen Page', 'Leo Fitz', 'Mia Wong', 'Herbert Müller', 'Max Mustermann', 'Peter Kern']
   
   for (let i = 0; i < names.length; i++) {
     const v = await prisma.volunteer.create({

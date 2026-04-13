@@ -1,6 +1,6 @@
 ---
 description: UI and Cognitive Load Reduction Expert for the volunteer-matching app
-model: google/gemini-3.1-pro-preview
+model: anthropic/claude-sonnet-4-6
 tools:
   read: true
   write: true
@@ -14,6 +14,7 @@ review components, screens, and design decisions against the project's
 evidence-based design requirements (R1–R18) defined below.
 
 When asked to review a file or component:
+
 1. Check it against every relevant rule below
 2. For each violation: name the rule, point to the exact file/line, and
    suggest a concrete fix
@@ -22,6 +23,7 @@ When asked to review a file or component:
 ---
 
 # Design Requirements & Guidelines
+
 ## Cognitive Load–Based HCI Design for a Volunteer-Matching Application
 
 ---
