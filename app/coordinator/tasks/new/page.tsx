@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Priority, Skill, AutomationMode } from "@/lib/enums";
+import { Priority, Skill, AutomationMode, RecurrenceRule } from "@/lib/enums";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CoordinatorAuthGuard } from "@/app/components/CoordinatorAuthGuard";
@@ -34,6 +34,7 @@ export default function NewTaskPage() {
   const [screeningRequired, setScreeningRequired] = useState(false);
   const [screeningNote, setScreeningNote] = useState("");
   const [requiredSkills, setRequiredSkills] = useState<Skill[]>([]);
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +68,7 @@ export default function NewTaskPage() {
           meetingPoint: meetingPoint || undefined,
           screeningRequired,
           screeningNote: screeningNote || undefined,
+          recurrenceRule: recurrenceRule || undefined,
         }),
       });
 
@@ -205,6 +207,28 @@ export default function NewTaskPage() {
               onChange={(e) => setEndTime(e.target.value)}
               className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium" htmlFor="recurrenceRule">
+              Repeats
+            </label>
+            <select
+              id="recurrenceRule"
+              value={recurrenceRule}
+              onChange={(e) => setRecurrenceRule(e.target.value as RecurrenceRule | "")}
+              className="rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Does not repeat</option>
+              <option value={RecurrenceRule.DAILY}>Daily</option>
+              <option value={RecurrenceRule.WEEKLY}>Weekly</option>
+              <option value={RecurrenceRule.BIWEEKLY}>Every 2 weeks</option>
+              <option value={RecurrenceRule.MONTHLY}>Monthly</option>
+            </select>
+            {recurrenceRule && (
+              <p className="text-xs text-zinc-500 mt-0.5">
+                All instances up to 4 weeks ahead will be created automatically.
+              </p>
+            )}
           </div>
         </section>
 

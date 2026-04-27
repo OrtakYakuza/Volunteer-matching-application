@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AssignmentStatus, TaskStatus } from "@/lib/enums";
+import { Prisma } from "@prisma/client";
 
 
 export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
         );
       }
 
-      // Proceed with status update and task status recalculation.
+      // Proceed with status update, task status recalculation, and series propagation.
       const updated = await prisma.$transaction(async (tx) => {
         const updatedAssignment = await tx.assignment.update({
           where: { id: assignmentId },
@@ -94,6 +95,67 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
           where: { id: taskId },
           data: { status: newTaskStatus },
         });
+
+        // Auto-accept volunteer on all future instances of the same series.
+        if (task.seriesId) {
+          const now = new Date();
+          const futureInstances = await tx.task.findMany({
+            where: {
+              seriesId: task.seriesId,
+              id: { not: taskId },
+              startTime: { gt: now },
+              status: { not: TaskStatus.FULL },
+            },
+            orderBy: { startTime: "asc" },
+          });
+
+          for (const instance of futureInstances) {
+            // Check capacity for this instance.
+            const instanceAccepted = await tx.assignment.count({
+              where: { taskId: instance.id, status: AssignmentStatus.ACCEPTED },
+            });
+            if (instanceAccepted >= instance.capacity) continue;
+
+            // Upsert: create accepted assignment if not already assigned.
+            try {
+              await tx.assignment.upsert({
+                where: {
+                  volunteerId_taskId: {
+                    volunteerId: existing.volunteerId,
+                    taskId: instance.id,
+                  },
+                },
+                update: { status: AssignmentStatus.ACCEPTED },
+                create: {
+                  volunteerId: existing.volunteerId,
+                  taskId: instance.id,
+                  status: AssignmentStatus.ACCEPTED,
+                },
+              });
+
+              // Recalculate task status for this instance.
+              const newAcceptedCount = await tx.assignment.count({
+                where: { taskId: instance.id, status: AssignmentStatus.ACCEPTED },
+              });
+              let instanceStatus: TaskStatus = TaskStatus.OPEN;
+              if (newAcceptedCount >= instance.capacity) {
+                instanceStatus = TaskStatus.FULL;
+              } else if (newAcceptedCount > 0) {
+                instanceStatus = TaskStatus.PARTIALLY_FILLED;
+              }
+              await tx.task.update({
+                where: { id: instance.id },
+                data: { status: instanceStatus },
+              });
+            } catch (e) {
+              // Skip on unique constraint or other per-instance errors.
+              if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+                continue;
+              }
+              throw e;
+            }
+          }
+        }
 
         return updatedAssignment;
       });

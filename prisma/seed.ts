@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
-import { Skill, Priority, TaskStatus, AutomationMode, AssignmentStatus } from '../lib/enums'
+import { randomUUID } from 'crypto'
+import { Skill, Priority, TaskStatus, AutomationMode, AssignmentStatus, RecurrenceRule } from '../lib/enums'
 
 const prisma = new PrismaClient()
 
@@ -127,6 +128,39 @@ async function main() {
       priority: Priority.LOW, status: TaskStatus.OPEN, automationMode: AutomationMode.AUTO,
     },
   }))
+
+  // Weekly recurring series: "Community Kitchen Help" — 4 weekly instances
+  console.log('Creating recurring task series...')
+  const kitchenSeriesId = randomUUID()
+  const kitchenBase = new Date()
+  kitchenBase.setHours(10, 0, 0, 0)
+  // Find next Saturday
+  kitchenBase.setDate(kitchenBase.getDate() + ((6 - kitchenBase.getDay() + 7) % 7 || 7))
+
+  for (let week = 0; week < 4; week++) {
+    const start = new Date(kitchenBase)
+    start.setDate(start.getDate() + week * 7)
+    const end = new Date(start)
+    end.setHours(14, 0, 0, 0)
+    tasks.push(await prisma.task.create({
+      data: {
+        title: 'Community Kitchen Help',
+        category: 'Food Distribution',
+        description: 'Help prepare and serve meals at the community kitchen. Recurring every Saturday.',
+        location: 'Community Center Kitchen',
+        postalCode: '10003',
+        requiredSkills: JSON.stringify([Skill.LIGHT_PHYSICAL]),
+        capacity: 6,
+        startTime: start,
+        endTime: end,
+        priority: Priority.MEDIUM,
+        status: TaskStatus.OPEN,
+        automationMode: AutomationMode.AUTO,
+        recurrenceRule: RecurrenceRule.WEEKLY,
+        seriesId: kitchenSeriesId,
+      },
+    }))
+  }
 
   console.log('Creating some initial assignments (applications)...')
   

@@ -40,3 +40,10 @@ export enum Priority {
   HIGH = 'HIGH',
   CRITICAL = 'CRITICAL'
 }
+
+export enum RecurrenceRule {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  BIWEEKLY = 'BIWEEKLY',
+  MONTHLY = 'MONTHLY',
+}

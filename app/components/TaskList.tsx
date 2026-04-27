@@ -18,6 +18,8 @@ type Task = {
   status: string;
   priority: string;
   automationMode: string;
+  recurrenceRule: string | null;
+  seriesId: string | null;
   assignments: Assignment[];
 };
 
@@ -85,7 +87,7 @@ export function TaskList() {
           >
             <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium text-zinc-900">{task.title}</p>
                   {isCritical && !isFull && (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
@@ -95,6 +97,11 @@ export function TaskList() {
                   <span className="rounded-full border border-zinc-300 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
                     {task.automationMode}
                   </span>
+                  {task.recurrenceRule && (
+                    <span className="rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700">
+                      ↻ {task.recurrenceRule === "BIWEEKLY" ? "Every 2 weeks" : task.recurrenceRule.charAt(0) + task.recurrenceRule.slice(1).toLowerCase()}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-zinc-600 mt-1 flex items-center gap-2">
                   <span>📍 {task.location}</span>

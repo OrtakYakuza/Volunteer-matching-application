@@ -55,12 +55,14 @@ model Task {
   priority       String         @default("MEDIUM") // Priority enum
   status         String         @default("OPEN")   // TaskStatus enum
   automationMode String         @default("MANUAL") // AutomationMode enum
-  meetingPoint   String?        // FR-06 (optional)
-  screeningRequired Boolean?    // FR-26
-  screeningNote    String?      // FR-26
-  assignments      Assignment[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  meetingPoint      String?        // FR-06 (optional)
+  screeningRequired Boolean?       // FR-26
+  screeningNote     String?        // FR-26
+  recurrenceRule    String?        // RecurrenceRule enum: DAILY | WEEKLY | BIWEEKLY | MONTHLY | null
+  seriesId          String?        // shared cuid for all instances of the same recurring series
+  assignments       Assignment[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
 
 model Assignment {
