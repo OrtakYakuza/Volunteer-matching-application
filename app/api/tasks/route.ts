@@ -144,6 +144,13 @@ export async function POST(request: Request) {
           seriesId: null,
         },
       });
+      await prisma.eventLog.create({
+        data: {
+          actorType: "COORDINATOR",
+          eventType: "TASK_CREATED",
+          payload: JSON.stringify({ taskId: task.id, title: task.title }),
+        },
+      });
       return NextResponse.json({ task }, { status: 201 });
     }
 
@@ -167,6 +174,19 @@ export async function POST(request: Request) {
         }),
       ),
     );
+
+    await prisma.eventLog.create({
+      data: {
+        actorType: "COORDINATOR",
+        eventType: "TASK_SERIES_CREATED",
+        payload: JSON.stringify({
+          seriesId,
+          title: tasks[0].title,
+          recurrenceRule: parsedRecurrenceRule,
+          instanceCount: tasks.length,
+        }),
+      },
+    });
 
     // Return the first instance as the "created" task.
     return NextResponse.json({ task: tasks[0], seriesId, instanceCount: tasks.length }, { status: 201 });

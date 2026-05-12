@@ -321,23 +321,23 @@ export default function TaskDetailPage() {
                          <div className="flex items-center gap-2">
                            <span className="text-[10px] text-zinc-500 italic">Waiting for auto-fill...</span>
                            <button
-                              type="button"
-                              onClick={() => updateAssignmentStatus(assignment.id, AssignmentStatus.DECLINED)}
-                              className="text-[10px] text-red-600 hover:underline"
-                            >
-                              Remove
-                            </button>
+                               type="button"
+                               onClick={() => updateAssignmentStatus(assignment.id, AssignmentStatus.DECLINED)}
+                               className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 hover:bg-red-100 transition-colors"
+                             >
+                               Remove
+                             </button>
                          </div>
                       )}
-                      {assignment.status === AssignmentStatus.ACCEPTED && (
-                        <button
-                          type="button"
-                          onClick={() => updateAssignmentStatus(assignment.id, AssignmentStatus.DECLINED)}
-                          className="text-[10px] text-red-600 hover:underline"
-                        >
-                          Remove
-                        </button>
-                      )}
+                        {assignment.status === AssignmentStatus.ACCEPTED && (
+                         <button
+                           type="button"
+                           onClick={() => updateAssignmentStatus(assignment.id, AssignmentStatus.DECLINED)}
+                           className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 hover:bg-red-100 transition-colors"
+                         >
+                           Remove
+                         </button>
+                       )}
                     </>
                   }
                 />

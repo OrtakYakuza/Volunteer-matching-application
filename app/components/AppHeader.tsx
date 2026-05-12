@@ -39,6 +39,9 @@ export function AppHeader() {
               <Link href="/coordinator/tasks/new" className="text-zinc-600 hover:text-zinc-900 transition-colors">
                 Create Task
               </Link>
+              <Link href="/coordinator/events" className="text-zinc-600 hover:text-zinc-900 transition-colors">
+                Event log
+              </Link>
             </nav>
           )}
         </div>
@@ -82,6 +85,9 @@ export function AppHeader() {
             </Link>
             <Link href="/coordinator/tasks/new" className="text-zinc-600 hover:text-zinc-900">
               Create Task
+            </Link>
+            <Link href="/coordinator/events" className="text-zinc-600 hover:text-zinc-900">
+              Event log
             </Link>
           </>   
         )}

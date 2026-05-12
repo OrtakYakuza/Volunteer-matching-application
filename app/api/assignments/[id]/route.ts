@@ -96,6 +96,19 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
           data: { status: newTaskStatus },
         });
 
+        await tx.eventLog.create({
+          data: {
+            actorType: "COORDINATOR",
+            eventType: "VOLUNTEER_ACCEPTED",
+            payload: JSON.stringify({
+              assignmentId,
+              volunteerId: existing.volunteerId,
+              taskId,
+              taskTitle: task.title,
+            }),
+          },
+        });
+
         // Auto-accept volunteer on all future instances of the same series.
         if (task.seriesId) {
           const now = new Date();
@@ -163,10 +176,23 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
       return NextResponse.json({ assignment: updated }, { status: 200 });
     }
 
-    // Non-acceptance updates (DECLINED, CANCELLED, COMPLETED) don't change capacity here.
+    // Non-acceptance updates (DECLINED, CANCELLED, COMPLETED) — log and update.
     const updated = await prisma.assignment.update({
       where: { id: assignmentId },
       data: { status },
+    });
+
+    await prisma.eventLog.create({
+      data: {
+        actorType: "COORDINATOR",
+        eventType: `VOLUNTEER_${status}`,
+        payload: JSON.stringify({
+          assignmentId,
+          volunteerId: existing.volunteerId,
+          taskId: existing.taskId,
+          taskTitle: existing.task.title,
+        }),
+      },
     });
 
     return NextResponse.json({ assignment: updated }, { status: 200 });
