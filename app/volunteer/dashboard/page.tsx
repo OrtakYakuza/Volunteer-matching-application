@@ -94,6 +94,30 @@ export default function VolunteerDashboardPage() {
     }
   }, [user, fetchAssignments, fetchAvailableTasks]);
 
+  const withdrawApplication = async (assignmentId: string) => {
+    if (!user) return;
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setActionError(data.error ?? "Failed to withdraw application.");
+        return;
+      }
+      setActionSuccess("Application withdrawn.");
+      fetchAssignments(user.id);
+      fetchAvailableTasks();
+    } catch (err) {
+      console.error(err);
+      setActionError("Failed to withdraw application.");
+    }
+  };
+
   const applyForTask = async (taskId: string) => {
     if (!user) return;
     setActionError(null);
@@ -223,6 +247,7 @@ export default function VolunteerDashboardPage() {
               assignments={proposedAssignments}
               statusColor="text-yellow-700 bg-yellow-50 border-yellow-200"
               statusText="Review Pending"
+              onWithdraw={withdrawApplication}
             />
 
             <AssignmentsSection
@@ -252,6 +277,7 @@ type AssignmentsSectionProps = {
   assignments: Assignment[];
   statusColor: string;
   statusText: string;
+  onWithdraw?: (assignmentId: string) => void;
 };
 
 function AssignmentsSection({
@@ -259,7 +285,8 @@ function AssignmentsSection({
   emptyText,
   assignments,
   statusColor,
-  statusText
+  statusText,
+  onWithdraw,
 }: AssignmentsSectionProps) {
   return (
     <section className="space-y-3">
@@ -297,6 +324,16 @@ function AssignmentsSection({
                 <p className="mt-1 text-xs text-zinc-600 font-medium">
                   Meeting point: {assignment.task.meetingPoint}
                 </p>
+              )}
+              {onWithdraw && (
+                <div className="mt-2 flex justify-end">
+                  <button
+                    onClick={() => onWithdraw(assignment.id)}
+                    className="text-[11px] text-red-600 hover:text-red-800 hover:underline"
+                  >
+                    Withdraw application
+                  </button>
+                </div>
               )}
             </li>
           ))}
