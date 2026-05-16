@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { AssignmentStatus, TaskStatus } from "@/lib/enums";
+import { AssignmentStatus, TaskStatus, Skill } from "@/lib/enums";
+import { TaskFilterState, EMPTY_FILTER, filterTasks, parseSkills } from "@/lib/task-filter";
+import { TaskFilterBar } from "@/app/components/TaskFilterBar";
 import { useAuth } from "@/app/context/AuthContext";
 import Link from "next/link";
 
@@ -12,6 +14,7 @@ type Task = {
   description: string;
   location: string;
   postalCode: string | null;
+  requiredSkills: string;
   startTime: string;
   endTime: string;
   status: TaskStatus;
@@ -31,6 +34,8 @@ export default function VolunteerDashboardPage() {
   const { user, isHydrated } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
+  const [filter, setFilter] = useState<TaskFilterState>(EMPTY_FILTER);
+  const [mySkills, setMySkills] = useState<Skill[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
@@ -72,8 +77,20 @@ export default function VolunteerDashboardPage() {
     if (user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchAssignments(user.id);
-       
+
       fetchAvailableTasks();
+      fetch("/api/volunteers/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.volunteer?.skills) {
+            setMySkills(parseSkills(data.volunteer.skills) as Skill[]);
+          }
+        })
+        .catch(console.error);
     }
   }, [user, fetchAssignments, fetchAvailableTasks]);
 
@@ -121,6 +138,7 @@ export default function VolunteerDashboardPage() {
   // Filter out tasks the user has already applied for
   const appliedTaskIds = new Set(assignments.map(a => a.task.id));
   const visibleTasks = availableTasks.filter(t => !appliedTaskIds.has(t.id));
+  const filteredTasks = filterTasks(visibleTasks, filter);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-4 py-10">
@@ -148,11 +166,22 @@ export default function VolunteerDashboardPage() {
               </p>
             )}
 
-            {visibleTasks.length === 0 ? (
-              <p className="text-sm text-zinc-500 italic">No available tasks matching your search.</p>
+            <TaskFilterBar
+              value={filter}
+              onChange={setFilter}
+              onUseMySkills={() => setFilter({ ...filter, skills: mySkills })}
+              mySkillsCount={mySkills.length}
+            />
+
+            {filteredTasks.length === 0 ? (
+              <p className="text-sm text-zinc-500 italic">
+                {visibleTasks.length === 0
+                  ? "No available tasks right now."
+                  : "No tasks match the current filter."}
+              </p>
             ) : (
               <ul className="space-y-4">
-                {visibleTasks.map((task) => (
+                {filteredTasks.map((task) => (
                   <li key={task.id} className="rounded-lg border p-4 shadow-sm bg-white">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-semibold">{task.title}</h3>

@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Priority, TaskStatus } from "@/lib/enums";
+import { TaskFilterState, EMPTY_FILTER, filterTasks } from "@/lib/task-filter";
+import { TaskFilterBar } from "@/app/components/TaskFilterBar";
 
 type Assignment = {
   id: string;
@@ -13,6 +15,8 @@ type Task = {
   id: string;
   title: string;
   location: string;
+  postalCode: string | null;
+  requiredSkills: string;
   startTime: string;
   capacity: number;
   status: string;
@@ -26,6 +30,7 @@ type Task = {
 export function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<TaskFilterState>(EMPTY_FILTER);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -44,6 +49,8 @@ export function TaskList() {
     return () => window.removeEventListener("focus", fetchTasks);
   }, [fetchTasks]);
 
+  const filteredTasks = filterTasks(tasks, filter);
+
   if (loading) {
     return <p className="text-xs text-zinc-500">Loading tasks...</p>;
   }
@@ -57,8 +64,21 @@ export function TaskList() {
   }
 
   return (
-    <ul className="space-y-3">
-      {tasks.map((task) => {
+    <div className="space-y-3">
+      <TaskFilterBar value={filter} onChange={setFilter} />
+      {filteredTasks.length === 0 ? (
+        <p className="text-xs text-zinc-600">
+          No tasks match the current filter.{" "}
+          <button
+            onClick={() => setFilter(EMPTY_FILTER)}
+            className="text-blue-600 hover:underline"
+          >
+            Clear filters
+          </button>
+        </p>
+      ) : (
+      <ul className="space-y-3">
+      {filteredTasks.map((task) => {
         const acceptedCount = task.assignments.filter(
           (a) => a.status === "ACCEPTED",
         ).length;
@@ -139,6 +159,8 @@ export function TaskList() {
           </li>
         );
       })}
-    </ul>
+      </ul>
+      )}
+    </div>
   );
 }
