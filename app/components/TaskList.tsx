@@ -151,7 +151,7 @@ export function TaskList() {
             <div className="mt-4 flex justify-end">
               <Link
                 href={`/coordinator/tasks/${task.id}`}
-                className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
+                className="inline-flex items-center justify-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
               >
                 Manage task →
               </Link>

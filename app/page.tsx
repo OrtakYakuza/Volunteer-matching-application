@@ -188,9 +188,12 @@ export default function Home() {
             </div>
             {error && <p className="text-xs text-red-600">{error}</p>}
             {success && <p className="text-xs text-green-700">{success}</p>}
-            <div className="text-center pt-2 text-xs text-zinc-500">
-              Don&apos;t have an account?{" "}
-              <Link href="/volunteer/register" className="text-blue-600 hover:underline">
+            <div className="flex items-center justify-center gap-2 pt-2 text-xs text-zinc-500">
+              <span>Don&apos;t have an account?</span>
+              <Link
+                href="/volunteer/register"
+                className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
                 Register here
               </Link>
             </div>
@@ -225,9 +228,12 @@ export default function Home() {
             </div>
             {coordError && <p className="text-xs text-red-600">{coordError}</p>}
             {coordSuccess && <p className="text-xs text-green-700">{coordSuccess}</p>}
-            <div className="text-center pt-2 text-xs text-zinc-500">
-              Don&apos;t have an account?{" "}
-              <Link href="/coordinator/register" className="text-zinc-900 font-medium hover:underline">
+            <div className="flex items-center justify-center gap-2 pt-2 text-xs text-zinc-500">
+              <span>Don&apos;t have an account?</span>
+              <Link
+                href="/coordinator/register"
+                className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
                 Register here
               </Link>
             </div>
