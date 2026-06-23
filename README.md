@@ -6,7 +6,7 @@ This prototype was built as the practical artifact for a bachelor's thesis on re
 
 > 📄 **Thesis:** [Volunteering Matching Application for a Crisis Management Platform](./docs/BSc_Thesis_Nikola_Petrovic.pdf) — Nikola Petrović (PDF)
 >
-> 📋 **Requirements:** the full catalogue — Functional (FR), Non-Functional (NFR), Information (IR), and Design (DR) requirements with their MoSCoW priorities and source citations — lives in [`requirements.md`](./requirements.md).
+> 📋 **Requirements:** the full catalogue: Functional (FR), Non-Functional (NFR), Information (IR), and Design (DR) requirements with their MoSCoW priorities and source citations, lives in [`requirements.md`](./requirements.md).
 
 ---
 
