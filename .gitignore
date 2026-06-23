@@ -42,7 +42,8 @@ next-env.d.ts
 
 /app/generated/prisma
 
-#private
+#private (AI agent config — keep local, never push)
 AGENTS.md
+CLAUDE.md
 .claude/
 .opencode/
