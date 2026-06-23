@@ -4,7 +4,9 @@ A web-based **Human-in-the-Loop (HITL)** prototype for coordinating spontaneous 
 
 This prototype was built as the practical artifact for a bachelor's thesis on reducing coordinator cognitive load in volunteer coordination systems. Its design is grounded in a structured requirements catalogue (derived from academic literature and practitioner interviews) and in Cognitive Load Theory–based HCI design rules.
 
-> The full requirements catalogue — Functional (FR), Non-Functional (NFR), Information (IR), and Design (DR) requirements with their MoSCoW priorities and source citations — lives in [`requirements.md`](./requirements.md).
+> 📄 **Thesis:** [Volunteering Matching Application for a Crisis Management Platform](./docs/BSc_Thesis_Nikola_Petrovic.pdf) — Nikola Petrović (PDF)
+>
+> 📋 **Requirements:** the full catalogue — Functional (FR), Non-Functional (NFR), Information (IR), and Design (DR) requirements with their MoSCoW priorities and source citations — lives in [`requirements.md`](./requirements.md).
 
 ---
 
@@ -122,6 +124,14 @@ The schema (see [`prisma/schema.prisma`](./prisma/schema.prisma)) follows a data
 - **EventLog** — an append-only audit/event history (NFR-04, IR-14).
 
 > SQLite does not support native enums or arrays. Enums are stored as `String` and cast at the application layer (see [`lib/enums.ts`](./lib/enums.ts)); list fields (skills, required skills) are stored as JSON strings and must be `JSON.parse()`d before comparison.
+
+---
+
+## Thesis
+
+This prototype is the practical artifact for my bachelor's thesis, **"Volunteering Matching Application for a Crisis Management Platform"** by Nikola Petrović.
+
+📄 **[Read the full thesis (PDF)](./docs/BSc_Thesis_Nikola_Petrovic.pdf)**
 
 ---
 
